@@ -229,6 +229,7 @@ GameObject:
   - component: {fileID: 8405256878845704312}
   - component: {fileID: 7713306764506514816}
   - component: {fileID: 1120842764282793101}
+  - component: {fileID: 6089761562223940168}
   m_Layer: 0
   m_Name: NetworkTank
   m_TagString: Untagged
@@ -427,6 +428,20 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   inputSendRate: 20
   inputTimeoutSeconds: 0.5
+--- !u!114 &6089761562223940168
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2146720628477683744}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4634f2282cdfb7f419c6954199c116c8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: NetworkTankArena.Runtime::NetworkTankArena.NetworkTankHealth
+  ShowTopMostFoldoutHeaderGroup: 1
+  maxHealth: 100
 --- !u!1 &2654045706602636725
 GameObject:
   m_ObjectHideFlags: 0

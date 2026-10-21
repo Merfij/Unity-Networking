@@ -1,8 +1,10 @@
 using NetworkTankArena.Combat;
 using NetworkTankArena.Networking;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
+using NetworkTankArena.Tanks;
 
 namespace NetworkTankArena.Tanks
 {
@@ -16,34 +18,53 @@ namespace NetworkTankArena.Tanks
         [SerializeField] private InputActionReference turn;
         [SerializeField] private InputActionReference aimPosition;
         [SerializeField] private InputActionReference fire;
+        [SerializeField] private InputActionReference respawn;
 
         private InputAction throttleAction;
         private InputAction turnAction;
         private InputAction aimPositionAction;
         private InputAction fireAction;
+        private InputAction respawnAction;
         private NetworkTankController networkTank;
         private bool waitingForNeutralMovement;
         private readonly FireRequestLatch fireLatch = new FireRequestLatch();
 
         private void OnEnable()
         {
+
+            if (networkTank == null)
+                return;
+
             fireLatch.RequireRelease();
             waitingForNeutralMovement = true;
+
             // Private action instances have an explicit lifetime and never disable project-wide actions.
             throttleAction = throttle != null ? throttle.action?.Clone() : null;
             turnAction = turn != null ? turn.action?.Clone() : null;
             aimPositionAction = aimPosition != null ? aimPosition.action?.Clone() : null;
             fireAction = fire != null ? fire.action?.Clone() : null;
+            respawnAction = respawn != null ? respawn.action?.Clone() : null;
 
-            if (tank == null || (networkTank == null && (weapon == null || weapon.Tank != tank)) || aimCamera == null ||
-                throttleAction == null || turnAction == null || aimPositionAction == null || fireAction == null ||
-                throttleAction.expectedControlType != "Axis" || turnAction.expectedControlType != "Axis" ||
-                aimPositionAction.expectedControlType != "Vector2" || fireAction.type != InputActionType.Button ||
-                fireAction.expectedControlType != "Button")
+            //if (tank == null || (networkTank == null && (weapon == null || weapon.Tank != tank)) || aimCamera == null ||
+            //    throttleAction == null || turnAction == null || aimPositionAction == null || fireAction == null ||
+            //    throttleAction.expectedControlType != "Axis" || turnAction.expectedControlType != "Axis" ||
+            //    aimPositionAction.expectedControlType != "Vector2" || fireAction.type != InputActionType.Button ||
+            //    fireAction.expectedControlType != "Button")
+            //{
+            //    Debug.LogError("LocalTankController needs a tank, its weapon, an aim camera, and " +
+            //        "Tank/Throttle (Axis), Tank/Turn (Axis), Tank/AimPosition (Vector2), and " +
+            //        "Tank/Fire (Button) action references.", this);
+            //    enabled = false;
+
+            //    return;
+            //}
+
+            if (tank == null || aimCamera == null || throttleAction == null || turnAction == null ||
+                aimPositionAction == null || fireAction == null || respawnAction == null)
             {
-                Debug.LogError("LocalTankController needs a tank, its weapon, an aim camera, and " +
-                    "Tank/Throttle (Axis), Tank/Turn (Axis), Tank/AimPosition (Vector2), and " +
-                    "Tank/Fire (Button) action references.", this);
+                Debug.LogError(
+                    "LocalTankController is missing a required tank, camera, or input action.",
+                    this);
                 enabled = false;
                 return;
             }
@@ -52,6 +73,7 @@ namespace NetworkTankArena.Tanks
             turnAction.Enable();
             aimPositionAction.Enable();
             fireAction.Enable();
+            respawnAction.Enable();
         }
 
         private void OnDisable()
@@ -64,6 +86,7 @@ namespace NetworkTankArena.Tanks
             turnAction?.Dispose();
             aimPositionAction?.Dispose();
             fireAction?.Dispose();
+            respawnAction?.Dispose();
             throttleAction = turnAction = aimPositionAction = fireAction = null;
         }
 
@@ -76,10 +99,37 @@ namespace NetworkTankArena.Tanks
             }
         }
 
+        [ContextMenu("Testing/Apply 100 Damage")]
+        private void TestApplyDamage()
+        {
+            if (networkTank == null || !networkTank.IsSpawned)
+                return;
+
+            NetworkTankHealth health =
+                networkTank.GetComponent<NetworkTankHealth>();
+
+            if (health == null)
+                return;
+
+            health.ApplyDamage(100, gameObject);
+        }
+
         private void Update()
         {
             if (tank == null || (networkTank != null && !networkTank.CanReadLocalInput))
                 return;
+
+            if (networkTank != null && networkTank.IsDead)
+            {
+                if (respawnAction.WasPressedThisFrame())
+                {
+                    networkTank.RequestRespawn();
+                }
+
+                networkTank.SubmitLocalIntent(default);
+                fireLatch.RequireRelease();
+                return;
+            }
 
             TankControlIntent intent = default;
             if (Application.isFocused)
@@ -91,6 +141,7 @@ namespace NetworkTankArena.Tanks
                     fireLatch.TryRequest(fireHeld, fireAction.WasPressedThisFrame(), canRequestFire);
                 float throttleValue = throttleAction.ReadValue<float>();
                 float turnValue = turnAction.ReadValue<float>();
+                bool respawnRequested = respawnAction.WasPressedThisFrame();
                 if (waitingForNeutralMovement)
                 {
                     waitingForNeutralMovement = Mathf.Abs(throttleValue) > 0.01f || Mathf.Abs(turnValue) > 0.01f;

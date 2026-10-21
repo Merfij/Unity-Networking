@@ -148,6 +148,12 @@ namespace NetworkTankArena.Networking
             // NGO creates exactly one owned PlayerObject using the registered Player Prefab.
         }
 
+        internal void TryRespawn(NetworkTankController deadTank, ulong clientId)
+        {
+            //Implement respawn here.
+            Debug.Log("Respawn requested, but not implemented yet.");
+        }
+
         internal void BindLocalPlayer(NetworkTankController player)
         {
             if (player == null || !player.CanReadLocalInput)

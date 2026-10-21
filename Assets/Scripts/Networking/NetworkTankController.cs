@@ -1,9 +1,10 @@
-using System.Collections.Generic;
 using NetworkTankArena.Combat;
 using NetworkTankArena.Tanks;
+using System.Collections.Generic;
 using Unity.Netcode;
 using Unity.Netcode.Components;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace NetworkTankArena.Networking
 {
@@ -27,6 +28,9 @@ namespace NetworkTankArena.Networking
         private ulong fireSequence;
         private double nextSendTime;
 
+        private NetworkTankHealth health;
+        public bool IsDead => health != null && health.IsDead;
+
         public bool CanReadLocalInput => IsSpawned && IsClient && IsOwner && isActiveAndEnabled;
 
         private void Awake()
@@ -36,6 +40,7 @@ namespace NetworkTankArena.Networking
             // No weapon gameplay before spawn, or on a client copy.
             if (weapon != null)
                 weapon.enabled = false;
+            health = GetComponent<NetworkTankHealth>();
         }
 
         public override void OnNetworkSpawn()
@@ -140,7 +145,7 @@ namespace NetworkTankArena.Networking
                 client.PlayerObject != NetworkObject)
                 return;
 
-            if (!serverFire.TryReceive(sender, OwnerClientId, requestSequence, desiredAimWorldPoint,
+            if (health == null || health.IsDead || !serverFire.TryReceive(sender, OwnerClientId, requestSequence, desiredAimWorldPoint,
                 tank.TurretOrigin, out float shotYaw) || !isActiveAndEnabled ||
                 weapon == null || !weapon.isActiveAndEnabled ||
                 !NetworkProjectile.IsValidPrefab(weapon.ProjectilePrefab, NetworkManager))
@@ -186,6 +191,9 @@ namespace NetworkTankArena.Networking
             if (!IsSpawned || !IsServer)
                 return;
 
+            if (health != null && health.IsDead)
+                return;
+
             float timeout = TankMath.IsFinite(inputTimeoutSeconds) ? Mathf.Max(0.1f, inputTimeoutSeconds) : 0.5f;
             tank.Simulate(serverIntent.Read(Time.unscaledTimeAsDouble, timeout), Time.fixedDeltaTime);
             turretYaw.Value = tank.TurretYaw;
@@ -229,5 +237,36 @@ namespace NetworkTankArena.Networking
             fireSequence = 0;
             serverFire.Reset();
         }
+
+        public void RequestRespawn()
+        {
+            if (!CanReadLocalInput || !IsDead)
+                return;
+
+            RequestRespawnRpc();
+        }
+
+        [Rpc(SendTo.Server, Delivery = RpcDelivery.Reliable,
+            InvokePermission = RpcInvokePermission.Owner)]
+        private void RequestRespawnRpc(RpcParams rpcParams = default)
+        {
+            if (!IsSpawned || !IsServer || NetworkManager.ShutdownInProgress)
+                return;
+
+            ulong sender = rpcParams.Receive.SenderClientId;
+
+            if (sender != OwnerClientId ||
+                !NetworkManager.ConnectedClients.TryGetValue(sender, out var client) ||
+                client.PlayerObject != NetworkObject ||
+                !IsDead)
+                return;
+
+            LocalNetworkSession session =
+                FindFirstObjectByType<LocalNetworkSession>();
+
+            if (session != null)
+                session.TryRespawn(this, sender);
+        }
     }
+
 }
