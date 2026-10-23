@@ -152,6 +152,57 @@ namespace NetworkTankArena.Networking
         {
             //Implement respawn here.
             Debug.Log("Respawn requested, but not implemented yet.");
+
+            if (networkManager == null || !networkManager.IsServer || deadTank == null || !deadTank.IsSpawned || !deadTank.IsDead || deadTank.OwnerClientId != clientId)
+                return;
+
+            if (!networkManager.ConnectedClients.TryGetValue(clientId, out NetworkClient client) || client.PlayerObject != deadTank.NetworkObject)
+                return;
+
+            if(!spawnSlots.TryGetValue(clientId, out int slot))
+                return;
+
+            Transform spawn = slot == 0 ? hostSpawn : clientSpawn;
+
+            if (spawn == null || !TankMath.IsFinite(spawn.position) || !TankMath.IsFinite(spawn.eulerAngles.y))
+            {
+                Debug.Log("Can't respawn: spawn point is invalid."); return;
+            }
+
+            GameObject newTankObject = networkManager.NetworkConfig.PlayerPrefab;
+
+            if (newTankObject == null || !newTankObject.TryGetComponent(out NetworkObject networkObject) || !newTankObject.TryGetComponent(out NetworkTankController networkTankController) || !newTankObject.TryGetComponent(out NetworkTankHealth networkTankHealth))
+            {
+                Debug.LogError(
+                    "Cannot respawn: the Player Prefab needs NetworkObject, " +
+                    "NetworkTankController, and NetworkTankHealth components.",
+                    this);
+
+                return;
+            }
+
+            deadTank.NetworkObject.Despawn(true);
+
+            //Instantiates a new tank on the server but not on the cliet.
+            GameObject respawnedTank = Instantiate(newTankObject, spawn.position, Quaternion.Euler(0f, spawn.eulerAngles.y, 0f));
+            NetworkObject respawnedNetworkObject = respawnedTank.GetComponent<NetworkObject>();
+
+            try
+            {
+                //Assigns the ownership of the new tank to the client and spawns it on the network.
+                respawnedNetworkObject.SpawnAsPlayerObject(clientId);
+            } catch (System.Exception ex)
+            {
+                if (respawnedNetworkObject != null && respawnedNetworkObject.IsSpawned)
+                {
+                    respawnedNetworkObject.Despawn(true);
+                }
+                Debug.LogError($"Failed to spawn respawned tank for client {clientId}: {ex.Message}");
+                Destroy(respawnedTank);
+                return;
+
+            }
+
         }
 
         internal void BindLocalPlayer(NetworkTankController player)
