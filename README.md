@@ -10,17 +10,21 @@ Added a server authoritative health and respawn system.
 
 
 
-1\. Download the project from directory. 
+Repository: https://github.com/Merfij/Unity-Networking.git
+
+
+
+1\. Download the project from repository.
 
 2\. In Unity: Add / Add Project from disk.
 
-3\. Locate downloaded project. 
+3\. Locate downloaded project.
 
-4\. Open the project. 
+4\. Open the project.
 
 
 
-Testing: 
+Testing:
 
 
 
@@ -28,15 +32,15 @@ Testing:
 
 2\. In Unity editor, enter play mode and select "Start Host".
 
-3\. Both the host and the client should see each other now. 
+3\. Both the host and the client should see each other now.
 
-4\. Each player starts out with 100HP and a projectile hit does 25HP damage. So tanks die after 4 hits. 
+4\. Each player starts out with 100HP and a projectile hit does 25HP damage. So tanks die after 4 hits.
 
-5\. Once health is zero, movement and shooting are disabled. 
+5\. Once health is zero, movement and shooting are disabled.
 
-6\. Press "R" to respawn. 
+6\. Press "R" to respawn.
 
-7\. Tank respawns at starting position with full health. 
+7\. Tank respawns at starting position with full health.
 
 
 
@@ -44,7 +48,7 @@ Testing:
 
 
 
-I have implemented a health and respawn system which allows players to take damage and respawn upon health reaching zero. The client sends a respawn request to the server which then validates that request and spawns a new tank at the starting location. 
+I have implemented a health and respawn system which allows players to take damage and respawn upon health reaching zero. The client sends a respawn request to the server which then validates that request and spawns a new tank at the starting location.
 
 
 
@@ -52,9 +56,9 @@ I have implemented a health and respawn system which allows players to take dama
 
 
 
-The client is responsible for sending movement, shooting and respawn requests while the server is responsible for validating these requests and controlling the game state and replicating the authoritative game state to the clients. 
+The client is responsible for sending movement, shooting and respawn requests while the server is responsible for validating these requests and controlling the game state and replicating the authoritative game state to the clients.
 
-Since health and death are network variables only the server has the authority to changes these values so clients can see these values but can never change them by themselves. 
+Since health and death are network variables only the server has the authority to changes these values so clients can see these values but can never change them by themselves.
 
 
 
@@ -62,11 +66,11 @@ Since health and death are network variables only the server has the authority t
 
 
 
-I have tried different versions, both without network simulation and with and the respawn function worked as intended under both conditions. 
+I have tried different versions, both without network simulation and with and the respawn function worked as intended under both conditions.
 
 
 
-Network conditions: 
+Network conditions:
 
 
 
@@ -116,7 +120,5 @@ I wanted to see how this would work in a multiplayer setting as that is somethin
 
 
 
-The project has only been testing locally on the same computer using the host and client set-up so networking issues could happen if tested across different computers or over the internet. 
-
-
+The project has only been testing locally on the same computer using the host and client set-up so networking issues could happen if tested across different computers or over the internet.
 
